@@ -1,0 +1,122 @@
+#include <Servo.h>
+
+Servo servo01, servo02, servo03, servo04, servo05, servo06;
+
+// Position variables
+int servo1PPos = 90, servo2PPos = 100, servo3PPos = 120;
+int servo4PPos = 95, servo5PPos = 60, servo6PPos = 110;
+
+// Step arrays
+int servo01SP[50], servo02SP[50], servo03SP[50];
+int servo04SP[50], servo05SP[50], servo06SP[50];
+int index = 0;
+
+// Input data
+int dataIn = 0;
+int speedDelay = 15;
+
+void setup() {
+  Serial.begin(9600);
+
+  servo01.attach(5);
+  servo02.attach(6);
+  servo03.attach(7);
+  servo04.attach(8);
+  servo05.attach(9);
+  servo06.attach(10);
+
+  servo01.write(servo1PPos);
+  servo02.write(servo2PPos);
+  servo03.write(servo3PPos);
+  servo04.write(servo4PPos);
+  servo05.write(servo5PPos);
+  servo06.write(servo6PPos);
+}
+
+void loop() {
+  if (Serial.available()) {
+    dataIn = Serial.read();
+
+    switch (dataIn) {
+      case 16: servo1PPos++; servo01.write(servo1PPos); delay(speedDelay); break;
+      case 17: servo1PPos--; servo01.write(servo1PPos); delay(speedDelay); break;
+      case 18: servo2PPos++; servo02.write(servo2PPos); delay(speedDelay); break;
+      case 19: servo2PPos--; servo02.write(servo2PPos); delay(speedDelay); break;
+      case 20: servo3PPos++; servo03.write(servo3PPos); delay(speedDelay); break;
+      case 21: servo3PPos--; servo03.write(servo3PPos); delay(speedDelay); break;
+      case 22: servo4PPos++; servo04.write(servo4PPos); delay(speedDelay); break;
+      case 23: servo4PPos--; servo04.write(servo4PPos); delay(speedDelay); break;
+      case 24: servo5PPos++; servo05.write(servo5PPos); delay(speedDelay); break;
+      case 25: servo5PPos--; servo05.write(servo5PPos); delay(speedDelay); break;
+      case 26: servo6PPos++; servo06.write(servo6PPos); delay(speedDelay); break;
+      case 27: servo6PPos--; servo06.write(servo6PPos); delay(speedDelay); break;
+
+      case 12: // Save Step
+        servo01SP[index] = servo1PPos;
+        servo02SP[index] = servo2PPos;
+        servo03SP[index] = servo3PPos;
+        servo04SP[index] = servo4PPos;
+        servo05SP[index] = servo5PPos;
+        servo06SP[index] = servo6PPos;
+        index++;
+        break;
+
+      case 13: // Reset
+        index = 0;
+        break;
+
+      case 14: // Run saved steps
+        runSteps();
+        break;
+    }
+
+    // Speed adjustment (values 100–150 from slider)
+    if (dataIn >= 100 && dataIn <= 150) {
+      speedDelay = dataIn / 10;
+    }
+  }
+}
+
+void runSteps() {
+  while (true) {
+    for (int i = 0; i < index - 1; i++) {
+      if (Serial.available()) {
+        dataIn = Serial.read();
+        if (dataIn == 13) return; // Reset
+        if (dataIn == 15) { // Pause
+          while (true) {
+            if (Serial.available()) {
+              dataIn = Serial.read();
+              if (dataIn == 14) break; // Resume
+              if (dataIn == 13) return; // Reset
+            }
+          }
+        }
+        if (dataIn >= 100 && dataIn <= 150) {
+          speedDelay = dataIn / 10;
+        }
+      }
+
+      moveServoSmoothly(servo01, servo01SP[i], servo01SP[i+1]);
+      moveServoSmoothly(servo02, servo02SP[i], servo02SP[i+1]);
+      moveServoSmoothly(servo03, servo03SP[i], servo03SP[i+1]);
+      moveServoSmoothly(servo04, servo04SP[i], servo04SP[i+1]);
+      moveServoSmoothly(servo05, servo05SP[i], servo05SP[i+1]);
+      moveServoSmoothly(servo06, servo06SP[i], servo06SP[i+1]);
+    }
+  }
+}
+
+void moveServoSmoothly(Servo &s, int from, int to) {
+  if (from < to) {
+    for (int i = from; i <= to; i++) {
+      s.write(i);
+      delay(speedDelay);
+    }
+  } else {
+    for (int i = from; i >= to; i--) {
+      s.write(i);
+      delay(speedDelay);
+    }
+  }
+}
